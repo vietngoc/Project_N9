@@ -1,0 +1,5 @@
+{
+  "cmake.sourceDirectory": "D:/EmbeddedC",
+  "cmake.buildDirectory": "${workspaceFolder}/make",
+  "cmake.configureOnOpen": true
+}
