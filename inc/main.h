@@ -9,10 +9,10 @@
 
 void saveDevice();
 void importDevice();
-void showListDevice();
 void runProcess();
 void runAllDevice();
 void noteTimeRequire(float);
 float getTimeRequire();
-void checkAllDevice();
-
+void showAllDevice();
+void showBatteryDevice();
+void showDetailDevice();

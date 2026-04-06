@@ -40,83 +40,136 @@ void writeLog(const char *message){
     fclose(f); // đóng file
 }
 
-int main(void) {
-   importDevice();
-   return 0;
-}
-
-void importDevice() {
-   FILE *listDevice = fopen("listDevices.txt", "w+");
-   if (listDevice == NULL) {
-       printf("UKhong the xac dinh thiet !");
+void noteTimeRequire(float maxTime) {
+   FILE *noteTimeRequire = fopen("note_time_require.txt", "wb");
+   if (noteTimeRequire == NULL) {
+       printf("Unable to identify list device!");
        return;
    }
-// Không mở được file : in ra thông báo 
+   fwrite(&maxTime, sizeof(float), 1, noteTimeRequire);
+   fclose(noteTimeRequire);
+}
+// ghi giá trị maxTime (thời gian chạy lâu nhất) vào file note_time_require.txt
 
-   writeLog("Khoi tao danh sach thiet bi"); // log khi bắt đầu import
+float getTimeRequire() {
+   float timeRequire;
+   FILE *noteTimeRequire = fopen("note_time_require.txt", "rb");
+   if (noteTimeRequire == NULL) {
+       printf("Unable to identify list device!");
+       return 0;
+   }
+   fread(&timeRequire, sizeof(float), 1, noteTimeRequire);
+   fclose(noteTimeRequire);
+   return timeRequire;
+}
+// Lấy lại thời gian chạy tối đa (maxTime) từ file để dùng cho hệ thống chạy.
 
-   Thietbi list[5];
-//danh sách gồm 5 thiết bị 
-   list[0] = (Thietbi) {
-       "Tủ lạnh", TURN_OFF, 1000, 100,1000,
-       {
-           {"Làm lạnh nhanh", TURN_ON, MEDIUM},
-           {"Kháng khuẩn", TURN_ON, LOW }
-           }
-   };
+void runProcess() {
+    
+    writeLog("Nguoi dung bat dau he thong"); // log khi user chạy
+    showAllDevice();
 
-   list[1] = (Thietbi) {
-       "Tivi", TURN_OFF, 2000, 150,2000,
-       {
-           {"Retina", TURN_ON, MEDIUM}
-           }
-   };
-   list[2] = (Thietbi) {
-       "Máy giặt", TURN_ON, 1500, 150,1500,
-       {
-           {"Giặt ngâm", TURN_ON, LOW},
-           {"Tự động sấy sau khi giặt", TURN_ON, EMPTY}
-           }
-   };
-   list[3] = (Thietbi) {
-       "Điều hoà", TURN_OFF, 1300, 110,1300,
-       {
-           {"Cấp ẩm", TURN_ON, MEDIUM},
-           {"Diệt khuẩn không khí", LOW},
-           {"Cảnh báo ô nhiễm", EMPTY}
-           }
-   };
-   list[4] = (Thietbi) {
-       "Bếp điện ", TURN_OFF, 1800, 200,1800,
-       {
-           {"Nấu siêu tốc", TURN_ON, LOW}
-       }
-   };
-// định nghĩa các thiết bị 
+    char request[1];
+    printf("Ban co muon bat dau chay tat ca cac thiet bi? (Y/N) ");
+    scanf("%s",&request);
 
-   float maxTime = 0;//Thời gian chạy toàn hệ thống( thiết bị chạy lâu nhất)
-   for (int i = 0; i < 5; i++) {
-       fwrite(&list[i], sizeof(Thietbi), 1, listDevice);
+    if (request[0] == 'Y' || request[0] == 'y') {
+       while (getchar() != '\n');
+            writeLog("Nguoi dung khoi dong tat ca thiet bi"); // log khi user chạy
+            runAllDevice();
+    } else {
+        printf("He thong chua duoc khoi dong! ");
+        writeLog("Nguoi dung ket thuc he thong"); // log khi user tắt}
+    }
+}
 
-       char msg[100]; 
-       sprintf(msg,"Them thiet bi: %s",list[i].name); 
-       writeLog(msg); // ghi log thêm thiết bị
+void showAllDevice() {
+   Thietbi thietbidangchay;
+   FILE *listDeviceRunning = fopen("../test/listDevices.txt", "rb+");
+   if (listDeviceRunning == NULL) {
+       printf("Khởi chạy hệ thống thất bại");
+   }
+   while (fread(&thietbidangchay, sizeof(Thietbi), 1, listDeviceRunning) == 1) {
 
-       float runTimeRequire = list[i].limitPower/list[i].powerPerHour;
-       if (runTimeRequire > maxTime) {
-           maxTime = runTimeRequire;
+       thietbidangchay.remainPower = thietbidangchay.remainPower - thietbidangchay.powerPerHour;
+       fseek(listDeviceRunning, -sizeof(Thietbi), SEEK_CUR);
+       fwrite(&thietbidangchay, sizeof(Thietbi), 1, listDeviceRunning);
+       fseek(listDeviceRunning, 0, SEEK_CUR);
+
+       int ratioPower = thietbidangchay.remainPower * 100/thietbidangchay.limitPower;
+
+       char msg[120]; 
+
+       int pinStatus = 0; // HIGHT
+       if (ratioPower > 80) {
+           pinStatus = HIGH;
+           printf("Thiet bi %s dang chay day du chuc nang (%d %c).\n", thietbidangchay.name, ratioPower, '%');
+
+           sprintf(msg,"%s: HIGH (%d%%)",thietbidangchay.name,ratioPower); 
+           writeLog(msg);
+
+       } else if (ratioPower <= 80 && ratioPower > 50) {
+           pinStatus = MEDIUM;
+           printf("Thiet bi %s con muc pin dam bao hoat dong tot (%d %c).\n", thietbidangchay.name, ratioPower,'%');
+
+           sprintf(msg,"%s: MEDIUM (%d%%)",thietbidangchay.name,ratioPower); 
+           writeLog(msg);
+
+       } else if (ratioPower <= 50 && ratioPower > 20) {
+           pinStatus = LOW;
+           printf("Thiet bi %s dang co muc pin thap (%d %c).\n", thietbidangchay.name, ratioPower, '%');
+
+           sprintf(msg,"%s: LOW (%d%%)",thietbidangchay.name,ratioPower); 
+           writeLog(msg);
+
+       } else {
+           printf("Thiet bi %s da tat.\n", thietbidangchay.name);
+
+           sprintf(msg,"%s: OFF",thietbidangchay.name); 
+           writeLog(msg);
        }
    }
-   noteTimeRequire(maxTime);
+}
 
-   rewind(listDevice);
-   Thietbi thietbi;
+void showBatteryDevice() {
 
-   const char* FORMAT = "%-20s %-20s %-20s %-20s\n";
-   const char* FORMATNUMBER = "%-20s %-20s %-20d %-20d\n";
-   printf("--- DANH SÁCH THIẾT BỊ ĐÃ LƯU TRỮ ---\n");
-   printf(FORMAT, "Tên sản phẩm", "Trạng thái hoạt động", "Hạn mức tiêu thụ(kW)", "Lượng tiêu thụ mỗi giờ(kWh)");
-   printf("--------------------------------------------\n");
+    printf("--- DANH SACH THIET BI DUNG PIN ---\n");
+    Thietbi thietbidangchay;
+    FILE *listDeviceRunning = fopen("../test/listDevices.txt", "rb");
+    if (listDeviceRunning == NULL) {
+       printf("Khởi chạy hệ thống thất bại");
+    }
+    const char* FORMAT = "%-20s %-20s %-20s\n";
+    printf(FORMAT, "Thiet bi", "Trang thai hoat dong", "Muc pin con lai (%)");
+    printf("--------------------------------------------\n");
+
+    while (fread(&thietbidangchay, sizeof(Thietbi), 1, listDeviceRunning) == 1) {
+        if (thietbidangchay.status == TURN_ON) {
+            int ratioPower = thietbidangchay.remainPower * 100/thietbidangchay.limitPower;
+            char stt[10];
+            switch (thietbidangchay.status) {
+               case TURN_OFF:
+                   strcpy(stt, "TURN_OFF");
+                   break;
+               case TURN_ON:
+                   strcpy(stt, "TURN_ON");
+                   break;
+           }
+           printf(FORMAT, thietbidangchay.name, stt, ratioPower);
+       }
+   }
+   fclose(listDeviceRunning);
+}
+
+void showDetailDevice() {
+
+    Thietbi thietbi;
+    FILE *listDevice = fopen("../test/listDevices.txt", "rb");
+    const char* FORMAT = "%-20s %-20s %-20s %-20s\n";
+    const char* FORMATNUMBER = "%-20s %-20s %-20d %-20d\n";
+    printf("--- THONG TIN THIET BI DA LUU ---\n");
+    printf(FORMAT, "Thiet bi", "Trang thai hoat dong", "Han muc tieu thu (kWh)", "Cong suat moi gio (kW)");
+    printf("--------------------------------------------\n");
 
    while (fread(&thietbi, sizeof(Thietbi), 1, listDevice) == 1) {
        enum Status status = thietbi.status;
@@ -133,61 +186,160 @@ void importDevice() {
        printf(FORMATNUMBER, thietbi.name, stt, thietbi.limitPower, thietbi.powerPerHour);
    }
    fclose(listDevice);
-//Đọc từng thiết bị từ file, chuyển trạng thái enum → chuỗi,in ra danh sách thiết bị,đóng file
-
-   runProcess();
-//Bắt đầu chương trình chính (runProcess)
-
 }
 
-void noteTimeRequire(float maxTime) {
-   FILE *noteTimeRequire = fopen("note_time_require.txt", "wb");
-   if (noteTimeRequire == NULL) {
-       printf("Unable to identify list device!");
+void importDevice() {
+    FILE *listDevice = fopen("../test/listDevices.txt", "w+");
+    if (listDevice == NULL) {
+       printf("Khong the tai danh sach thiet bị da luu !");
        return;
+    }
+
+    writeLog("Khoi tao danh sach thiet bi");
+
+    Thietbi list[5];
+    //danh sách gồm 5 thiết bị 
+    list[0] = (Thietbi) {
+       "Tu lanh", TURN_OFF, 1000, 100,1000,
+       {
+           {"Lanh nhanh", TURN_ON, MEDIUM},
+           {"Khang khuan", TURN_ON, LOW }
+           }
+    };
+
+    list[1] = (Thietbi) {
+       "Tivi", TURN_OFF, 2000, 150,2000,
+       {
+           {"Retina", TURN_ON, MEDIUM}
+           }
+    };
+    list[2] = (Thietbi) {
+       "May giat", TURN_ON, 1500, 150,1500,
+       {
+           {"Giat ngam", TURN_ON, LOW},
+           {"Tu dong say sau khi giat", TURN_ON, EMPTY}
+           }
+    };
+    list[3] = (Thietbi) {
+       "Dieu hoa", TURN_OFF, 1300, 110,1300,
+       {
+           {"Cap am", TURN_ON, MEDIUM},
+           {"Diệt khuẩn không khí", LOW},
+           {"Canh bao o nhiem", EMPTY}
+           }
+    };
+    list[4] = (Thietbi) {
+       "Bep dien", TURN_OFF, 1800, 200,1800,
+       {
+           {"Sieu toc", TURN_ON, LOW}
+       }
+    };
+// định nghĩa các thiết bị 
+
+    float maxTime = 0; //Thời gian chạy toàn hệ thống( thiết bị chạy lâu nhất)
+    for (int i = 0; i < 5; i++) {
+       fwrite(&list[i], sizeof(Thietbi), 1, listDevice);
+
+       char msg[100]; 
+       sprintf(msg,"Them thiet bi: %s",list[i].name); 
+       writeLog(msg); // ghi log thêm thiết bị
+
+       float runTimeRequire = list[i].limitPower/list[i].powerPerHour;
+       if (runTimeRequire > maxTime) {
+           maxTime = runTimeRequire;
+       }
+    }
+    noteTimeRequire(maxTime);
+
+    rewind(listDevice);
+    Thietbi thietbi;
+
+    const char* FORMAT = "%-20s %-20s %-20s %-20s\n";
+    const char* FORMATNUMBER = "%-20s %-20s %-20d %-20d\n";
+    printf("--- DANH SACH THIET BI DA LUU ---\n");
+    printf(FORMAT, "Thiet bi", "Trang thai hoat dong", "Han muc tieu thu (kWh)", "Cong suat moi gio (kW)");
+    printf("--------------------------------------------\n");
+
+    while (fread(&thietbi, sizeof(Thietbi), 1, listDevice) == 1) {
+       enum Status status = thietbi.status;
+       char stt[10];
+       switch (status) {
+           case TURN_OFF:
+               strcpy(stt, "TURN_OFF");
+               break;
+           case TURN_ON:
+               strcpy(stt, "TURN_ON");
+               break;
+       }
+
+       printf(FORMATNUMBER, thietbi.name, stt, thietbi.limitPower, thietbi.powerPerHour);
    }
-   fwrite(&maxTime, sizeof(float), 1, noteTimeRequire);
-   fclose(noteTimeRequire);
+   fclose(listDevice);
 }
-//ghi giá trị maxTime (thời gian chạy lâu nhất) vào file note_time_require.txt
 
-float getTimeRequire() {
-   float timeRequire;
-   FILE *noteTimeRequire = fopen("note_time_require.txt", "rb");
-   if (noteTimeRequire == NULL) {
-       printf("Unable to identify list device!");
-       return 0;
-   }
-   fread(&timeRequire, sizeof(float), 1, noteTimeRequire);
-   fclose(noteTimeRequire);
-   return timeRequire;
-}
-//Lấy lại thời gian chạy tối đa (maxTime) từ file để dùng cho hệ thống chạy.
+void showCurrentDevice() {
 
-void runProcess() {
-   char request[1];
-   printf("Bạn có muốn bắt đầu chạy tất cả các thiết bị không? (Y/N)\n");
-   scanf("%s",&request);
+    printf("\n======= CHI TIET THIET BI =======\n");
+   
+    Thietbi thietbidangchay;
+    FILE *listDeviceRunning = fopen("../test/listDevices.txt", "rb+");
+    if (listDeviceRunning == NULL) {
+        printf("Khởi chạy hệ thống thất bại");
+    }
+    while (fread(&thietbidangchay, sizeof(Thietbi), 1, listDeviceRunning) == 1) {
 
-   writeLog("Nguoi dung bat dau he thong"); // log khi user chạy
+        thietbidangchay.remainPower = thietbidangchay.remainPower - thietbidangchay.powerPerHour;
+        fseek(listDeviceRunning, -sizeof(Thietbi), SEEK_CUR);
+        fwrite(&thietbidangchay, sizeof(Thietbi), 1, listDeviceRunning);
+        fseek(listDeviceRunning, 0, SEEK_CUR);
 
-   while (request[0] == 'Y' || request[0] == 'y') {
-       while (getchar() != '\n');
-       runAllDevice();
+        int ratioPower = thietbidangchay.remainPower * 100/thietbidangchay.limitPower;
+
+        char msg[120]; 
+
+        int pinStatus = 0; // HIGHT
+        if (ratioPower > 80) {
+           pinStatus = HIGH;
+           printf("Thiet bi %s dang chay day du chuc nang (%d %c).\n", thietbidangchay.name, ratioPower, '%');
+
+           sprintf(msg,"%s: HIGH (%d%%)",thietbidangchay.name,ratioPower); 
+           writeLog(msg);
+
+        } else if (ratioPower <= 80 && ratioPower > 50) {
+           pinStatus = MEDIUM;
+           printf("Thiet bi %s con muc pin dam bao hoat dong tot (%d %c).\n", thietbidangchay.name, ratioPower,'%');
+
+           sprintf(msg,"%s: MEDIUM (%d%%)",thietbidangchay.name,ratioPower); 
+           writeLog(msg);
+
+        } else if (ratioPower <= 50 && ratioPower > 20) {
+           pinStatus = LOW;
+           printf("Thiet bi %s dang co muc pin thap (%d %c).\n", thietbidangchay.name, ratioPower, '%');
+
+           sprintf(msg,"%s: LOW (%d%%)",thietbidangchay.name,ratioPower); 
+           writeLog(msg);
+
+        } else {
+           printf("Thiet bi %s da tat.\n", thietbidangchay.name);
+
+           sprintf(msg,"%s: OFF",thietbidangchay.name); 
+           writeLog(msg);
+        }
    }
 }
 
 void runAllDevice() {
+    
    Thietbi batThietbi;
-   FILE *listDeviceRunning = fopen("listDevices.txt", "rb+");
+   FILE *listDeviceRunning = fopen("../test/listDevices.txt", "rb+");
    if (listDeviceRunning == NULL) {
-       printf("Khởi chạy hệ thống thất bại");
+       printf("Khoi chay he thong that bai!");
    }
 
-   writeLog("Bat tat ca thiet bi"); // log bật hệ thống
+   writeLog("Khoi dong tat ca thiet bi"); // log bật hệ thống
 
-   //bật trạng thái TURN_ON cho tất cả các thiết bị
-   while (fread(&batThietbi, sizeof(Thietbi), 1, listDeviceRunning) == 1) {
+    //bật trạng thái TURN_ON cho tất cả các thiết bị
+    while (fread(&batThietbi, sizeof(Thietbi), 1, listDeviceRunning) == 1) {
        if (batThietbi.status == TURN_OFF) {
            batThietbi.status = TURN_ON;
        }
@@ -206,57 +358,38 @@ void runAllDevice() {
    int timeRequire = (int) getTimeRequire();
    while (currentTime < timeRequire) {
        sleep(10);
-       checkAllDevice();
+       showCurrentDevice();
        currentTime++;
        printf("--------------------------------------------\n");
    }
 
 }
 
-void checkAllDevice() {
-   Thietbi thietbidangchay;
-   FILE *listDeviceRunning = fopen("listDevices.txt", "rb+");
-   if (listDeviceRunning == NULL) {
-       printf("Khởi chạy hệ thống thất bại");
-   }
-   while (fread(&thietbidangchay, sizeof(Thietbi), 1, listDeviceRunning) == 1) {
+int main() {
+    
+    int lua_chon;
+    do {
+        printf("\n======= CHUONG TRINH QUAN LY NANG LUONG =======\n");
+        printf("1. Danh sach thiet bi dang chay\n");
+        printf("2. Danh sach thiet bi dung pin\n");
+        printf("3. Chi tiet thiet bi\n");
+        printf("4. Them moi thiet bi\n");
+        printf("5. Khoi dong tat ca\n");
+        printf("0. Thoat\n");
+        printf("-----------------------------------------------\n");
+        printf("Nhap lua chon: ");
+        scanf("%d", &lua_chon);
 
-       thietbidangchay.remainPower = thietbidangchay.remainPower - thietbidangchay.powerPerHour;
-       fseek(listDeviceRunning, -sizeof(Thietbi), SEEK_CUR);
-       fwrite(&thietbidangchay, sizeof(Thietbi), 1, listDeviceRunning);
-       fseek(listDeviceRunning, 0, SEEK_CUR);
+        switch (lua_chon) {
+            case 1: runProcess(); break;
+            case 2: showBatteryDevice(); break;
+            case 3: showDetailDevice(); break;
+            case 4: importDevice(); break;
+            case 5: runAllDevice(); break;
+            case 0: printf("Tam biet!\n"); break;
+            default: printf("Lua chon sai!\n");
+        }
+    } while (lua_chon != 0);
 
-       int ratioPower = thietbidangchay.remainPower * 100/thietbidangchay.limitPower;
-
-       char msg[120]; 
-
-       int pinStatus = 0; // HIGHT
-       if (ratioPower > 80) {
-           pinStatus = HIGH;
-           printf("Thiết bị %s đang chạy đầy đủ chức năng (%d %c).\n", thietbidangchay.name, ratioPower, '%');
-
-           sprintf(msg,"%s: HIGH (%d%%)",thietbidangchay.name,ratioPower); 
-           writeLog(msg);
-
-       } else if (ratioPower <= 80 && ratioPower > 50) {
-           pinStatus = MEDIUM;
-           printf("Thiết bị %s còn mức pin đảm bảo hoạt động tốt (%d %c).\n", thietbidangchay.name, ratioPower,'%');
-
-           sprintf(msg,"%s: MEDIUM (%d%%)",thietbidangchay.name,ratioPower); 
-           writeLog(msg);
-
-       } else if (ratioPower <= 50 && ratioPower > 20) {
-           pinStatus = LOW;
-           printf("Thiết bị %s đang có mức pin thấp (%d %c).\n", thietbidangchay.name, ratioPower, '%');
-
-           sprintf(msg,"%s: LOW (%d%%)",thietbidangchay.name,ratioPower); 
-           writeLog(msg);
-
-       } else {
-           printf("Thiết bị %s đã tắt.\n", thietbidangchay.name);
-
-           sprintf(msg,"%s: OFF",thietbidangchay.name); 
-           writeLog(msg);
-       }
-   }
+    return 0;
 }
