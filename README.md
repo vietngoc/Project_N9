@@ -2,7 +2,7 @@
 Bài tập lớn nhóm 9 
 
 # Minh họa
-    ![alt text](/docs/image.png)
+    ![alt text](managers.png)
 
 # Tính năng
     Mô phỏng chương trình quản lý năng lượng trong các văn phòng thông minh
