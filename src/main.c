@@ -52,6 +52,7 @@ void noteTimeRequire(float maxTime) {
 // ghi giá trị maxTime (thời gian chạy lâu nhất) vào file note_time_require.txt
 
 float getTimeRequire() {
+
    float timeRequire;
    FILE *noteTimeRequire = fopen("note_time_require.txt", "rb");
    if (noteTimeRequire == NULL) {
@@ -84,6 +85,7 @@ void runProcess() {
 }
 
 void showAllDevice() {
+    
    Thietbi thietbidangchay;
    FILE *listDeviceRunning = fopen("../test/listDevices.txt", "rb+");
    if (listDeviceRunning == NULL) {
@@ -171,11 +173,11 @@ void showDetailDevice() {
     printf(FORMAT, "Thiet bi", "Trang thai hoat dong", "Han muc tieu thu (kWh)", "Cong suat moi gio (kW)");
     printf("--------------------------------------------\n");
 
-   while (fread(&thietbi, sizeof(Thietbi), 1, listDevice) == 1) {
-       enum Status status = thietbi.status;
-       char stt[10];
-       switch (status) {
-           case TURN_OFF:
+    while (fread(&thietbi, sizeof(Thietbi), 1, listDevice) == 1) {
+        enum Status status = thietbi.status;
+        char stt[10];
+        switch (status) {
+            case TURN_OFF:
                strcpy(stt, "TURN_OFF");
                break;
            case TURN_ON:
@@ -365,6 +367,21 @@ void runAllDevice() {
 
 }
 
+void displayReport() {
+
+    printf("\n======= BAO CAO TONG HOP =======\n");
+    float timeRequire;
+    FILE *noteTimeRequire = fopen("note_time_require.txt", "rb");
+    if (noteTimeRequire == NULL) {
+       printf("Unable to identify list device!");
+    }
+
+    fread(&timeRequire, sizeof(float), 1, noteTimeRequire);
+    printf("Thoi gian chay toan bo he thong: %.2f gio\n", timeRequire);
+
+    fclose(noteTimeRequire);
+}
+
 int main() {
     
     int lua_chon;
@@ -374,7 +391,7 @@ int main() {
         printf("2. Danh sach thiet bi dung pin\n");
         printf("3. Chi tiet thiet bi\n");
         printf("4. Them moi thiet bi\n");
-        printf("5. Khoi dong tat ca\n");
+        printf("5. Hien thi bao cap\n");
         printf("0. Thoat\n");
         printf("-----------------------------------------------\n");
         printf("Nhap lua chon: ");
@@ -385,7 +402,7 @@ int main() {
             case 2: showBatteryDevice(); break;
             case 3: showDetailDevice(); break;
             case 4: importDevice(); break;
-            case 5: runAllDevice(); break;
+            case 5: displayReport(); break;
             case 0: printf("Tam biet!\n"); break;
             default: printf("Lua chon sai!\n");
         }

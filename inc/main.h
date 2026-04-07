@@ -16,3 +16,4 @@ float getTimeRequire();
 void showAllDevice();
 void showBatteryDevice();
 void showDetailDevice();
+void displayReport();
