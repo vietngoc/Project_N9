@@ -2,7 +2,7 @@
 Bài tập lớn nhóm 9 
 
 # Minh họa
-    ![alt text](managers.png)
+    ![Minh họa](managers.png)
 
 # Tính năng
     Mô phỏng chương trình quản lý năng lượng trong các văn phòng thông minh
@@ -24,3 +24,12 @@ Bài tập lớn nhóm 9
     Chương trình biên dịch hiện là GCC
     - MSYS2 với môi trường Windows
     - GNU Toolchain với môi trường Linux;
+# Cấu trúc
+    Dự án bao gồm các thư mục sau:
+    - .vscosde: Cấu hình chp Visual Studio Code và CMake
+    - build: Chứa bản dựng của chương trình
+    - docs: Chứa tài liệu dự án
+    - inc: Chứa các tệp header
+    - src: Chưa mẫ nguồn
+    - test: Chưa tệp dữ liệu để kiểm thử
+    - make: Thư mực tạm thời khi biên dịch. Nên xóa đi khi gặp lỗi.
